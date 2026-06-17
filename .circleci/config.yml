@@ -68,6 +68,8 @@ jobs:
           command: |
             echo "Username length: ${#DOCKERHUB_USERNAME}"
             echo "Password length: ${#DOCKERHUB_PASSWORD}"
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
+            docker info | grep Username
       - run:
           name: Build and push dev image
           command: |
