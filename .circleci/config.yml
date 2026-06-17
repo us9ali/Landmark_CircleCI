@@ -68,6 +68,8 @@ jobs:
           command: |
             echo "Username length: ${#DOCKERHUB_USERNAME}"
             echo "Password length: ${#DOCKERHUB_PASSWORD}"
+            echo "Username first 3 chars: ${DOCKERHUB_USERNAME:0:3}"
+            echo "Password first 3 chars: ${DOCKERHUB_PASSWORD:0:3}"
       - run:
           name: Build and push dev image
           command: |
