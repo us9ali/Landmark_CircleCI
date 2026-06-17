@@ -17,31 +17,42 @@ jobs:
   # ─────────────────────────────────────────────
   # BUILD & TEST
   # ─────────────────────────────────────────────
-  build-and-test:
-    executor: node
-    steps:
-      - checkout
-      - run:
-          name: Install pnpm
-          command: |
-            corepack enable
-            corepack prepare pnpm@10.33.0 --activate
-      - restore_cache:
-          keys:
-            - pnpm-deps-{{ checksum "pnpm-lock.yaml" }}
-      - run:
-          name: Install dependencies
-          command: pnpm install --no-frozen-lockfile
-      - save_cache:
-          key: pnpm-deps-{{ checksum "pnpm-lock.yaml" }}
-          paths:
-            - node_modules
-      - run:
-          name: Build
-          command: pnpm build
-      - run:
-          name: Test
-          command: pnpm test
+build-and-test:
+  executor: node
+  steps:
+    - checkout
+    - run:
+        name: Install pnpm
+        command: |
+          mkdir -p "$HOME/.local/bin"
+          echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$BASH_ENV"
+          source "$BASH_ENV"
+
+          corepack enable --install-directory "$HOME/.local/bin" pnpm
+          corepack prepare pnpm@10.33.0 --activate
+
+          pnpm --version
+
+    - restore_cache:
+        keys:
+          - pnpm-deps-{{ checksum "pnpm-lock.yaml" }}
+
+    - run:
+        name: Install dependencies
+        command: pnpm install --no-frozen-lockfile
+
+    - save_cache:
+        key: pnpm-deps-{{ checksum "pnpm-lock.yaml" }}
+        paths:
+          - node_modules
+
+    - run:
+        name: Build
+        command: pnpm build
+
+    - run:
+        name: Test
+        command: pnpm test
 
   # ─────────────────────────────────────────────
   # DOCKER BUILD & PUSH (DEV)
