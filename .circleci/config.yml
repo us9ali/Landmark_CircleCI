@@ -9,6 +9,7 @@ executors:
   node:
     docker:
       - image: cimg/node:20.19
+
   docker-builder:
     docker:
       - image: cimg/base:2024.01
@@ -21,6 +22,7 @@ jobs:
     executor: node
     steps:
       - checkout
+
       - run:
           name: Install pnpm
           command: |
@@ -61,63 +63,18 @@ jobs:
     executor: docker-builder
     steps:
       - checkout
+
       - setup_remote_docker:
           version: 20.10.24
-      - run:
-          name: Debug credentials
-          command: |
-            echo "Username length: ${#DOCKERHUB_USERNAME}"
-            echo "Password length: ${#DOCKERHUB_PASSWORD}"
-            echo "Username first 3 chars: ${DOCKERHUB_USERNAME:0:3}"
-            echo "Password first 3 chars: ${DOCKERHUB_PASSWORD:0:3}"
+
       - run:
           name: Build and push dev image
           command: |
-            BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
-            TAG="${BRANCH}-dev"
-            docker build -t us9ali/landmark_circleci:${TAG} -t us9ali/landmark_circleci:dev .
-
-
-  # ─────────────────────────────────────────────
-  # DOCKER BUILD & PUSH (STAGING)
-  # ─────────────────────────────────────────────
-  docker-build-staging:
-    executor: docker-builder
-    steps:
-      - checkout
-      - setup_remote_docker:
-          version: 20.10.24
-      - run:
-          name: Build and push staging image
-          command: |
-            BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
-            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-staging"
-            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker build --build-arg NODE_ENV=staging -t us9ali/landmark_circleci:${TAG} -t us9ali/landmark_circleci:staging .
-            docker push us9ali/landmark_circleci:${TAG}
-            docker push us9ali/landmark_circleci:staging
-            echo "export IMAGE_TAG=${TAG}" >> $BASH_ENV
-
-  # ─────────────────────────────────────────────
-  # DOCKER BUILD & PUSH (PRODUCTION)
-  # ─────────────────────────────────────────────
-  docker-build-prod:
-    executor: docker-builder
-    steps:
-      - checkout
-      - setup_remote_docker:
-          version: 20.10.24
-      - run:
-          name: Build and push prod image
-          command: |
-          
-            set -ex
+            set -e
 
             BRANCH=$(echo "$CIRCLE_BRANCH" | sed 's/\//-/g')
-            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-production"
+            TAG="${BRANCH}-dev"
             IMAGE_NAME="us9ali/landmark_circleci"
-
-            echo "Checking Docker Hub environment variables..."
 
             if [ -z "$DOCKERHUB_USERNAME" ]; then
               echo "ERROR: DOCKERHUB_USERNAME is empty in CircleCI"
@@ -129,8 +86,98 @@ jobs:
               exit 1
             fi
 
-            echo "Docker Hub variables are present."
-            echo "Pushing to ${IMAGE_NAME}:${TAG}"
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+
+            docker build \
+              --build-arg NODE_ENV=development \
+              -t "${IMAGE_NAME}:${TAG}" \
+              -t "${IMAGE_NAME}:dev" \
+              .
+
+            docker push "${IMAGE_NAME}:${TAG}"
+            docker push "${IMAGE_NAME}:dev"
+
+  # ─────────────────────────────────────────────
+  # DOCKER BUILD & PUSH (STAGING)
+  # ─────────────────────────────────────────────
+  docker-build-staging:
+    executor: docker-builder
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          version: 20.10.24
+
+      - run:
+          name: Build and push staging image
+          command: |
+            set -e
+
+            BRANCH=$(echo "$CIRCLE_BRANCH" | sed 's/\//-/g')
+            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-staging"
+            IMAGE_NAME="us9ali/landmark_circleci"
+
+            if [ -z "$DOCKERHUB_USERNAME" ]; then
+              echo "ERROR: DOCKERHUB_USERNAME is empty in CircleCI"
+              exit 1
+            fi
+
+            if [ -z "$DOCKERHUB_PASSWORD" ]; then
+              echo "ERROR: DOCKERHUB_PASSWORD is empty in CircleCI"
+              exit 1
+            fi
+
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+
+            docker build \
+              --build-arg NODE_ENV=staging \
+              -t "${IMAGE_NAME}:${TAG}" \
+              -t "${IMAGE_NAME}:staging" \
+              .
+
+            docker push "${IMAGE_NAME}:${TAG}"
+            docker push "${IMAGE_NAME}:staging"
+
+            mkdir -p /tmp/image-info
+            echo "$IMAGE_NAME" > /tmp/image-info/image_name.txt
+            echo "$TAG" > /tmp/image-info/image_tag.txt
+
+            echo "Saved image for staging deploy: ${IMAGE_NAME}:${TAG}"
+
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - image-info
+
+  # ─────────────────────────────────────────────
+  # DOCKER BUILD & PUSH (PRODUCTION)
+  # ─────────────────────────────────────────────
+  docker-build-prod:
+    executor: docker-builder
+    steps:
+      - checkout
+
+      - setup_remote_docker:
+          version: 20.10.24
+
+      - run:
+          name: Build and push prod image
+          command: |
+            set -e
+
+            BRANCH=$(echo "$CIRCLE_BRANCH" | sed 's/\//-/g')
+            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-production"
+            IMAGE_NAME="us9ali/landmark_circleci"
+
+            if [ -z "$DOCKERHUB_USERNAME" ]; then
+              echo "ERROR: DOCKERHUB_USERNAME is empty in CircleCI"
+              exit 1
+            fi
+
+            if [ -z "$DOCKERHUB_PASSWORD" ]; then
+              echo "ERROR: DOCKERHUB_PASSWORD is empty in CircleCI"
+              exit 1
+            fi
 
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
 
@@ -145,9 +192,16 @@ jobs:
             docker push "${IMAGE_NAME}:${TAG}"
             docker push "${IMAGE_NAME}:production"
 
-            echo "export IMAGE_TAG=${TAG}" >> "$BASH_ENV"
-            echo "export IMAGE_NAME=${IMAGE_NAME}" >> "$BASH_ENV"
+            mkdir -p /tmp/image-info
+            echo "$IMAGE_NAME" > /tmp/image-info/image_name.txt
+            echo "$TAG" > /tmp/image-info/image_tag.txt
 
+            echo "Saved image for production deploy: ${IMAGE_NAME}:${TAG}"
+
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - image-info
 
   # ─────────────────────────────────────────────
   # DEPLOY TO STAGING (EKS)
@@ -156,17 +210,44 @@ jobs:
     executor: docker-builder
     steps:
       - checkout
+
+      - attach_workspace:
+          at: /tmp
+
       - aws-cli/setup
+
       - kubernetes/install-kubectl
+
       - run:
           name: Configure kubectl for staging EKS
-          command: aws eks update-kubeconfig --name landmark-eks-stg --region $AWS_REGION
+          command: aws eks update-kubeconfig --name landmark-eks-stg --region "$AWS_REGION"
+
       - run:
           name: Update image and deploy
           command: |
-            BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
-            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-staging"
-            sed -i "s|image:.*|image: us9ali/landmark_circleci:${TAG}|" k8s/05-service/deployment-service.yaml
+            set -e
+
+            IMAGE_NAME=$(cat /tmp/image-info/image_name.txt)
+            IMAGE_TAG=$(cat /tmp/image-info/image_tag.txt)
+
+            echo "IMAGE_NAME=[$IMAGE_NAME]"
+            echo "IMAGE_TAG=[$IMAGE_TAG]"
+
+            if [ -z "$IMAGE_NAME" ]; then
+              echo "ERROR: IMAGE_NAME is empty"
+              exit 1
+            fi
+
+            if [ -z "$IMAGE_TAG" ]; then
+              echo "ERROR: IMAGE_TAG is empty"
+              exit 1
+            fi
+
+            sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" k8s/05-service/deployment-service.yaml
+
+            echo "Modified image line:"
+            grep -n "image:" k8s/05-service/deployment-service.yaml
+
             kubectl apply -f k8s/05-service/deployment-service.yaml
 
   # ─────────────────────────────────────────────
@@ -176,15 +257,26 @@ jobs:
     executor: docker-builder
     steps:
       - checkout
+
+      - attach_workspace:
+          at: /tmp
+
       - aws-cli/setup
+
       - kubernetes/install-kubectl
+
       - run:
           name: Configure kubectl for production EKS
-          command: aws eks update-kubeconfig --name landmark-eks --region $AWS_REGION
+          command: aws eks update-kubeconfig --name landmark-eks --region "$AWS_REGION"
+
       - run:
           name: Update image and deploy
           command: |
-            set -ex
+            set -e
+
+            IMAGE_NAME=$(cat /tmp/image-info/image_name.txt)
+            IMAGE_TAG=$(cat /tmp/image-info/image_tag.txt)
+
             echo "IMAGE_NAME=[$IMAGE_NAME]"
             echo "IMAGE_TAG=[$IMAGE_TAG]"
 
@@ -218,6 +310,7 @@ workflows:
                 - main
                 - /^release\/.*/
                 - /^hotfix\/.*/
+
       - docker-build-dev:
           context: landmark-secrets
           requires:
@@ -235,6 +328,7 @@ workflows:
           filters:
             branches:
               only: /^release\/.*/
+
       - docker-build-staging:
           context: landmark-secrets
           requires:
@@ -242,6 +336,7 @@ workflows:
           filters:
             branches:
               only: /^release\/.*/
+
       - deploy-staging:
           context: landmark-secrets
           requires:
@@ -258,6 +353,7 @@ workflows:
               only:
                 - main
                 - /^hotfix\/.*/
+
       - docker-build-prod:
           context: landmark-secrets
           requires:
@@ -267,6 +363,7 @@ workflows:
               only:
                 - main
                 - /^hotfix\/.*/
+
       - deploy-prod:
           context: landmark-secrets
           requires:
