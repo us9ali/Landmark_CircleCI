@@ -111,25 +111,40 @@ jobs:
           name: Build and push prod image
           command: |
           
-            set -x
+            set -ex
 
             BRANCH=$(echo "$CIRCLE_BRANCH" | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-production"
-            IMAGE_NAME="${DOCKERHUB_USERNAME}/landmark_app_nodejs"
-            
-            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            
+            IMAGE_NAME="us9ali/landmark_circleci"
+
+            echo "Checking Docker Hub environment variables..."
+
+            if [ -z "$DOCKERHUB_USERNAME" ]; then
+              echo "ERROR: DOCKERHUB_USERNAME is empty in CircleCI"
+              exit 1
+            fi
+
+            if [ -z "$DOCKERHUB_PASSWORD" ]; then
+              echo "ERROR: DOCKERHUB_PASSWORD is empty in CircleCI"
+              exit 1
+            fi
+
+            echo "Docker Hub variables are present."
+            echo "Pushing to ${IMAGE_NAME}:${TAG}"
+
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+
             docker build \
               --build-arg NODE_ENV=production \
               -t "${IMAGE_NAME}:${TAG}" \
               -t "${IMAGE_NAME}:production" \
               .
-            
+
             echo "docker build completed"
-            
+
             docker push "${IMAGE_NAME}:${TAG}"
             docker push "${IMAGE_NAME}:production"
-            
+
             echo "export IMAGE_TAG=${TAG}" >> "$BASH_ENV"
             echo "export IMAGE_NAME=${IMAGE_NAME}" >> "$BASH_ENV"
 
