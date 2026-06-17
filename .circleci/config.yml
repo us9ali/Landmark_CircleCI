@@ -185,7 +185,7 @@ jobs:
           name: Update image and deploy
           command: |
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
-            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-prod"
+            TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-production"
             sed -i "s|image:.*|image: us9ali/landmark_circleci:${TAG}|" k8s/05-service/deployment-service.yaml
             kubectl apply -f k8s/05-service/deployment-service.yaml
 
