@@ -115,7 +115,8 @@ jobs:
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-prod"
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
             docker build --build-arg NODE_ENV=production -t us9ali/landmark_circleci:${TAG} -t us9ali/landmark_circleci:production .
-            echo "docker push completed"
+            echo "docker build completed"
+            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
             docker push us9ali/landmark_circleci:${TAG}
             docker push us9ali/landmark_circleci:production
             echo "export IMAGE_TAG=${TAG}" >> $BASH_ENV
