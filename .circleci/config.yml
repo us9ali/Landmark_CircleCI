@@ -68,15 +68,14 @@ jobs:
           command: |
             echo "Username length: ${#DOCKERHUB_USERNAME}"
             echo "Password length: ${#DOCKERHUB_PASSWORD}"
-            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker info
+            mkdir -p ~/.docker
+            echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"$(echo -n $DOCKERHUB_USERNAME:$DOCKERHUB_PASSWORD | base64)\"}}}" > ~/.docker/config.json
             docker info | grep -i username
       - run:
           name: Build and push dev image
           command: |
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-dev"
-            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
             docker build -t us9ali/landmark_circleci:${TAG} -t us9ali/landmark_circleci:dev .
             docker push us9ali/landmark_circleci:${TAG}
             docker push us9ali/landmark_circleci:dev
