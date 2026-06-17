@@ -110,6 +110,7 @@ jobs:
       - run:
           name: Build and push prod image
           command: |
+            set -x
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-prod"
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
