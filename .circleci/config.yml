@@ -74,9 +74,9 @@ jobs:
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-dev"
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker build -t us9ali/landmark_app_nodejs:${TAG} -t us9ali/landmark_app_nodejs:dev .
-            docker push us9ali/landmark_app_nodejs:${TAG}
-            docker push us9ali/landmark_app_nodejs:dev
+            docker build -t us9ali/us9ali/landmark_circleci:${TAG} -t us9ali/us9ali/landmark_circleci:dev .
+            docker push us9ali/us9ali/landmark_circleci:${TAG}
+            docker push us9ali/us9ali/landmark_circleci:dev
 
   # ─────────────────────────────────────────────
   # DOCKER BUILD & PUSH (STAGING)
@@ -93,9 +93,9 @@ jobs:
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-staging"
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker build --build-arg NODE_ENV=staging -t us9ali/landmark_app_nodejs:${TAG} -t us9ali/landmark_app_nodejs:staging .
-            docker push us9ali/landmark_app_nodejs:${TAG}
-            docker push us9ali/landmark_app_nodejs:staging
+            docker build --build-arg NODE_ENV=staging -t us9ali/us9ali/landmark_circleci:${TAG} -t us9ali/us9ali/landmark_circleci:staging .
+            docker push us9ali/us9ali/landmark_circleci:${TAG}
+            docker push us9ali/us9ali/landmark_circleci:staging
             echo "export IMAGE_TAG=${TAG}" >> $BASH_ENV
 
   # ─────────────────────────────────────────────
@@ -113,9 +113,9 @@ jobs:
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-prod"
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker build --build-arg NODE_ENV=production -t us9ali/landmark_app_nodejs:${TAG} -t us9ali/landmark_app_nodejs:latest .
-            docker push us9ali/landmark_app_nodejs:${TAG}
-            docker push us9ali/landmark_app_nodejs:latest
+            docker build --build-arg NODE_ENV=production -t us9ali/us9ali/landmark_circleci:${TAG} -t us9ali/us9ali/landmark_circleci:latest .
+            docker push us9ali/us9ali/landmark_circleci:${TAG}
+            docker push us9ali/us9ali/landmark_circleci:latest
             echo "export IMAGE_TAG=${TAG}" >> $BASH_ENV
 
   # ─────────────────────────────────────────────
@@ -135,7 +135,7 @@ jobs:
           command: |
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-staging"
-            sed -i "s|image:.*|image: us9ali/landmark_app_nodejs:${TAG}|" k8s/05-service/deployment-service.yaml
+            sed -i "s|image:.*|image: us9ali/us9ali/landmark_circleci:${TAG}|" k8s/05-service/deployment-service.yaml
             kubectl apply -f k8s/05-service/deployment-service.yaml
 
   # ─────────────────────────────────────────────
@@ -155,7 +155,7 @@ jobs:
           command: |
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-prod"
-            sed -i "s|image:.*|image: us9ali/landmark_app_nodejs:${TAG}|" k8s/05-service/deployment-service.yaml
+            sed -i "s|image:.*|image: us9ali/us9ali/landmark_circleci:${TAG}|" k8s/05-service/deployment-service.yaml
             kubectl apply -f k8s/05-service/deployment-service.yaml
 
 # ═══════════════════════════════════════════════
