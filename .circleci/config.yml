@@ -184,7 +184,25 @@ jobs:
       - run:
           name: Update image and deploy
           command: |
+            set -ex
+            echo "IMAGE_NAME=[$IMAGE_NAME]"
+            echo "IMAGE_TAG=[$IMAGE_TAG]"
+
+            if [ -z "$IMAGE_NAME" ]; then
+              echo "ERROR: IMAGE_NAME is empty"
+              exit 1
+            fi
+
+            if [ -z "$IMAGE_TAG" ]; then
+              echo "ERROR: IMAGE_TAG is empty"
+              exit 1
+            fi
+
             sed -i "s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" k8s/05-service/deployment-service.yaml
+
+            echo "Modified image line:"
+            grep -n "image:" k8s/05-service/deployment-service.yaml
+
             kubectl apply -f k8s/05-service/deployment-service.yaml
 
 # ═══════════════════════════════════════════════
