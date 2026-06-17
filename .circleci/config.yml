@@ -110,16 +110,28 @@ jobs:
       - run:
           name: Build and push prod image
           command: |
+          
             set -x
-            BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
+
+            BRANCH=$(echo "$CIRCLE_BRANCH" | sed 's/\//-/g')
             TAG="${BRANCH}-$(date +'%Y-%m-%d-%H%M%S')-production"
+            IMAGE_NAME="${DOCKERHUB_USERNAME}/landmark_circleci"
+            
             echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker build --build-arg NODE_ENV=production -t us9ali/landmark_circleci:${TAG} -t us9ali/landmark_circleci:production .
+            
+            docker build \
+              --build-arg NODE_ENV=production \
+              -t "${IMAGE_NAME}:${TAG}" \
+              -t "${IMAGE_NAME}:production" \
+              .
+            
             echo "docker build completed"
-            echo "$DOCKERHUB_PASSWORD" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin registry-1.docker.io
-            docker push us9ali/landmark_circleci:${TAG}
-            docker push us9ali/landmark_circleci:production
-            echo "export IMAGE_TAG=${TAG}" >> $BASH_ENV
+            
+            docker push "${IMAGE_NAME}:${TAG}"
+            docker push "${IMAGE_NAME}:production"
+            
+            echo "export IMAGE_TAG=${TAG}" >> "$BASH_ENV"
+            echo "export IMAGE_NAME=${IMAGE_NAME}" >> "$BASH_ENV"
 
 
   # ─────────────────────────────────────────────
