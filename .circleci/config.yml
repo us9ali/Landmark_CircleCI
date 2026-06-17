@@ -64,6 +64,11 @@ jobs:
       - setup_remote_docker:
           version: 20.10.24
       - run:
+          name: Debug credentials
+          command: |
+            echo "Username length: ${#DOCKERHUB_USERNAME}"
+            echo "Password length: ${#DOCKERHUB_PASSWORD}"
+      - run:
           name: Build and push dev image
           command: |
             BRANCH=$(echo $CIRCLE_BRANCH | sed 's/\//-/g')
